@@ -1,0 +1,124 @@
+---
+title: "Skopje map"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(osmdata)
+library(cowplot)
+```
+
+```{r}
+
+getbb("Skopje North Macedonia")
+
+streets <- getbb("Skopje North Macedonia")%>%
+  opq()%>%
+  add_osm_feature(key = "highway", 
+                  value = c("motorway", "primary", 
+                            "secondary", "tertiary")) %>%
+  osmdata_sf()
+streets
+```
+
+```{r}
+small_streets <- getbb("Skopje North Macedonia")%>%
+  opq()%>%
+  add_osm_feature(key = "highway", 
+                  value = c("residential", "living_street",
+                            "unclassified",
+                            "service", "footway")) %>%
+  osmdata_sf()
+
+river <- getbb("Skopje North Macedonia") %>%
+  opq()%>%
+  add_osm_feature(key = "waterway", value = "river") %>%
+  osmdata_sf()
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "black",
+          size = .4,
+          alpha = .8) +
+  
+```
+
+```{r}
+ggplot() +
+  geom_sf(data = streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "black",
+          size = .4,
+          alpha = .8) +
+  geom_sf(data = small_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "black",
+          size = .4,
+          alpha = .6) +
+  geom_sf(data = river$osm_lines,
+          inherit.aes = FALSE,
+          color = "black",
+          size = .2,
+          alpha = .5) +
+  coord_sf(xlim = c(21.31541, 21.53771), 
+           ylim = c(41.94003, 42.04918),
+           expand = FALSE) 
+```
+
+```{r}
+p <- ggplot() +
+  geom_sf(data = streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "black",
+          size = .4,
+          alpha = .8) +
+  geom_sf(data = small_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "azure4",
+          size = .4,
+          alpha = .6) +
+  geom_sf(data = river$osm_lines,
+          inherit.aes = FALSE,
+          color = "navy",
+          size = .5,
+          alpha = .5) +
+  coord_sf(xlim = c(21.31541, 21.53771), 
+           ylim = c(41.94003, 42.04918),
+           expand = FALSE) 
+  
+  
+
+p  <- p +
+  #labs(title = "Скопје", subtitle = "42°0′N / 21°26′E") +
+  theme_bw() +
+  theme(axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid = element_blank(),
+        panel.border = element_rect(color = "black", size = 1))
+   #    plot.title = element_text(hjust = 0.5),
+   #    plot.subtitle = element_text(hjust = 0.5))
+
+#Not sure if this is the right way to have text below the plot
+
+p <- gridExtra::grid.arrange(p, bottom="С К О П Ј Е\n42°0′N / 21°26′E")
+
+  
+p  
+```
+
+```{r}
+# Add the coat of arms
+
+logo_file <- png::readPNG("./coat.png")
+
+ggdraw(p) + 
+  draw_image(logo_file, x = 1, y = 1, hjust = 6.9, vjust = 4.2, width = 0.13, height = 0.2)
+
+ggsave("map.png", width = 6.6, height = 4.2)
+
+```
+
