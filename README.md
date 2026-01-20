@@ -1,2 +1,5 @@
 # skopjeosm
-A Rmd file to draw Skopje following https://ggplot2tutor.com/streetmaps/streetmaps/
+
+A Quarto document to draw Skopje using Open Streetmap data. Originally made based on the example of ggplot2tutor.
+
+![](map.png)
