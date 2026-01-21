@@ -1,45 +1,95 @@
 ---
-title: "Skopje map"
+title: "Skopje Map"
 author: novica
 output: html
 ---
 
 ```{r}
-library(tidyverse)
-library(osmdata)
-library(cowplot)
-library(ggthemes)
+#| label: libraries
+#| warning: false
+box::use(
+  cowplot[ggdraw, draw_image],
+  ggplot2[annotate, ggplot, coord_sf, element_blank, geom_sf, ggsave, theme],
+  ggthemes[theme_solarized],
+  osmdata[add_osm_feature, getbb, opq, osmdata_sf],
+  png[readPNG]
+)
+```
+
+## Data
+
+We use data from [OpenStreetMap](https://www.openstreetmap.org). The objects are stored as `RDS` files in `data` because there  is no need to query for it each time this notebook is run.
+
+```{r}
+#| label: get-coordinates
+#| eval: false
+ 
+coordinates <- getbb("Skopje North Macedonia")
 ```
 
 ```{r}
+#| label: get-streets
+#| eval: false
 
-getbb("Skopje North Macedonia")
-
-streets <- getbb("Skopje North Macedonia")%>%
-  opq()%>%
+streets <- getbb("Skopje North Macedonia") |>
+  opq()|>
   add_osm_feature(key = "highway", 
                   value = c("motorway", "primary", 
-                            "secondary", "tertiary")) %>%
+                            "secondary", "tertiary")) |>
   osmdata_sf()
 streets
 ```
 
 ```{r}
-small_streets <- getbb("Skopje North Macedonia")%>%
-  opq()%>%
+#| label: get-small-streets
+#| eval: false
+ 
+small_streets <- getbb("Skopje North Macedonia")|>
+  opq()|>
   add_osm_feature(key = "highway", 
                   value = c("residential", "living_street",
                             "unclassified",
-                            "service", "footway")) %>%
-  osmdata_sf()
-
-river <- getbb("Skopje North Macedonia") %>%
-  opq()%>%
-  add_osm_feature(key = "waterway", value = "river") %>%
+                            "service", "footway")) |>
   osmdata_sf()
 ```
 
 ```{r}
+#| label: get-rivers
+#| eval: false
+ 
+river <- getbb("Skopje North Macedonia") |>
+  opq()|>
+  add_osm_feature(key = "waterway", value = "river") |>
+  osmdata_sf()
+```
+
+```{r}
+#| label: save-data
+#| eval: false
+
+saveRDS(coordinates, 'data/coordinates.rds')
+saveRDS(streets, 'data/streets.rds')
+saveRDS(small_streets, 'data/small_streets.rds')
+saveRDS(rivers, 'data/rivers.rds')
+```
+
+### Load saved data (start here)
+
+```{r}
+#| label: load-data
+
+coordinates <- readRDS("data/coordinates.rds")
+streets <- readRDS("data/streets.rds")
+small_streets <- readRDS("data/small_streets.rds")
+rivers <- readRDS("data/river.rds")
+
+```
+
+## Plot
+
+```{r}
+#| label: basic-plot
+
 ggplot() +
   geom_sf(data = streets$osm_lines,
           inherit.aes = FALSE,
@@ -50,6 +100,8 @@ ggplot() +
 ```
 
 ```{r}
+#| label: all-layers-plot
+
 ggplot() +
   geom_sf(data = streets$osm_lines,
           inherit.aes = FALSE,
@@ -61,75 +113,75 @@ ggplot() +
           color = "black",
           size = .4,
           alpha = .6) +
-  geom_sf(data = river$osm_lines,
+  geom_sf(data = rivers$osm_lines,
           inherit.aes = FALSE,
           color = "black",
           size = .2,
           alpha = .5) +
-  coord_sf(xlim = c(21.31541, 21.53771), 
-           ylim = c(41.94003, 42.04918),
+  coord_sf(xlim = coordinates[1, ], 
+           ylim = coordinates[2, ],
            expand = FALSE) 
 ```
 
 ```{r}
+#| label: construct-final-lot
 p <- ggplot() +
   geom_sf(data = streets$osm_lines,
           inherit.aes = FALSE,
           color = "black",
-          size = .4,
+          size = .6,
           alpha = .8) +
   geom_sf(data = small_streets$osm_lines,
           inherit.aes = FALSE,
           color = "azure4",
           size = .4,
           alpha = .6) +
-  geom_sf(data = river$osm_lines,
+  geom_sf(data = rivers$osm_lines,
           inherit.aes = FALSE,
-          color = "navy",
-          size = .5,
-          alpha = .5) +
-  coord_sf(xlim = c(21.31541, 21.53771), 
-           ylim = c(41.94003, 42.04918),
-           expand = FALSE) 
-  
+          color = "darkturquoise",
+          size = 1.2,
+          alpha = .8) +
+  coord_sf(xlim = coordinates[1, ], 
+           ylim = coordinates[2, ],
+           expand = TRUE) 
+```  
   
 
-p  <- p +
-  #labs(title = "Скопје", subtitle = "42°0′N / 21°26′E") +
-  #theme_bw() +
+
+```{r}
+#| label: add-theme
+p <- p + theme_solarized(light=TRUE) +
   theme(axis.text = element_blank(),
         axis.ticks = element_blank(),
         panel.grid = element_blank(),
-        panel.border = element_rect(color = "black", size = 1))
-   #    plot.title = element_text(hjust = 0.5),
-   #    plot.subtitle = element_text(hjust = 0.5))
-
+        panel.border = element_blank())
 ```
 
 ```{r}
-# theming (optional)
-#p <- p + theme_solarized(light=FALSE)
-
-#p
+#| label: annotate
+# Center coordinates: x = 21.42656, y = 42.00299
+p <- p + annotate("text", 
+                  x = 21.42656, 
+                  y = 41.945, 
+                  label = "С К О П Ј Е\n42°0′N / 21°26′E", 
+                  color = "darkturquoise", 
+                  size = 5,
+                  hjust = 0.5,
+                  family = "mono",
+                  fontface = "bold")
 ```
 
 ```{r}
-#Not sure if this is the right way to have text below the plot
-p <- gridExtra::grid.arrange(p, bottom="С К О П Ј Е\n42°0′N / 21°26′E")
+#| label: add-coat-of-arms
 
-  
-p  
-```
-
-```{r}
-# Add the coat of arms
-
-logo_file <- png::readPNG("./coat.png")
+logo_file <- readPNG("./coat.png")
 
 ggdraw(p) + 
-  draw_image(logo_file, x = 1, y = 1, hjust = 6.9, vjust = 4.2, width = 0.13, height = 0.2)
+  draw_image(logo_file, x = 1, y = 1, hjust = 6.5, vjust = 4.3, width = 0.13, height = 0.2)
+```
 
-ggsave("map.png", width = 6.6, height = 4.2)
-
+```{r}
+#| label: save-image
+ggsave("map.png", width = 8, height = 4.9)
 ```
 
